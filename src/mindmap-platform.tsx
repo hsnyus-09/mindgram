@@ -1,13 +1,13 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { 
-  Plus, 
-  Star, 
-  Share2, 
-  Heart, 
-  MessageCircle, 
-  User, 
-  Search, 
-  LogIn, 
+import {
+  Plus,
+  Star,
+  Share2,
+  Heart,
+  MessageCircle,
+  User,
+  Search,
+  LogIn,
   UserPlus,
   Save,
   Eye,
@@ -17,16 +17,9 @@ import {
   Edit,
   Sparkles
 } from 'lucide-react';
-import { CommunityPage } from './CommunityPage';
 import { Link, useNavigate } from 'react-router-dom';
+import { CommunityPage } from './CommunityPage';
 
-// Mock GPT API 응답 (실제로는 OpenAI API 연동)
-const mockGPTResponse = {
-  "AI": ["머신러닝", "딥러닝", "자연어처리", "컴퓨터비전"],
-  "UX디자인": ["사용자 연구", "프로토타이핑", "인터랙션 디자인", "접근성"],
-  "웹개발": ["프론트엔드", "백엔드", "API", "데이터베이스"],
-  "모바일": ["네이티브 앱", "크로스플랫폼", "반응형 디자인", "PWA"]
-};
 
 // Mock 데이터
 const mockUsers = [
@@ -72,7 +65,42 @@ const MindMapPlatform = (props: any) => {
   const [selectedNode, setSelectedNode] = useState<any>(null);
   // 기존 hoveredNode 상태를 toggledNode로 변경
   const [toggledNode, setToggledNode] = useState<any>(null);
+
+  const handleExpandNode = async () => {
+    if (!selectedNode) return
+    const ideas = await fetchGPTIdeas(selectedNode.text)
+    const newNodes = ideas.map((idea, index) => ({
+      id: (nodes.length + index + 1).toString(),
+      text: idea,
+      x: selectedNode.x + (Math.random() * 100 - 50),
+      y: selectedNode.y + (Math.random() * 100 - 50),
+      connections: []
+    }))
+    setNodes(prev => [
+      ...prev,
+      ...newNodes.map(n => ({ ...n, connections: [] }))
+    ])
+  }
+
   const [mapTitle, setMapTitle] = useState("새로운 마인드맵");
+
+const fetchGPTIdeas = async (topic: string): Promise<string[]> => {
+  try {
+    const res = await fetch('http://localhost:3001/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: `${topic}에 대한 관련 키워드를 4개 한국어로 제시해줘. 쉼표로 구분해서.` })
+    })
+    const data = await res.json()
+    console.log('topic',topic)
+    console.log('AI 응답:', data)
+    return data.result.split(',').map((s: string) => s.trim())
+  } catch (err) {
+    console.error('AI 호출 실패:', err)
+    return ['관련 아이디어']
+  }
+}
+
   const [isPublic, setIsPublic] = useState(false);
   const [publicMaps, setPublicMaps] = useState(mockPublicMaps);
   const [searchQuery, setSearchQuery] = useState("");
@@ -116,7 +144,7 @@ const MindMapPlatform = (props: any) => {
   // GPT 기반 노드 확장 (퍼센트 기반, 겹치지 않게 개선)
   const expandNode = useCallback(async (nodeId: any, nodeText: any) => {
     const svgSize = getSvgSize();
-    const suggestions = (mockGPTResponse as any)[nodeText] || ["관련 아이디어 1", "관련 아이디어 2", "관련 아이디어 3"];
+    const suggestions = await fetchGPTIdeas(nodeText);
     const parentNode = nodes.find((n: any) => n.id === nodeId);
     if (!parentNode) return;
     const baseAngle = -90;
