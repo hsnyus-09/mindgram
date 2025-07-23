@@ -5,6 +5,7 @@ import MindMapPlatform from './mindmap-platform'
 import { CommunityPage } from './CommunityPage'
 import LoginPage from './LoginPage'
 import SignupPage from './SignupPage'
+import PublicMapDetailPage from './PublicMapDetailPage';
 import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
@@ -16,6 +17,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <Route path="/editor" element={<MindMapPlatform editorOnly={true} />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
+        <Route path="/map/:id" element={<PublicMapDetailPage />} />
       </Routes>
     </BrowserRouter>
   </React.StrictMode>

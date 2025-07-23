@@ -70,7 +70,8 @@ const MindMapPlatform = (props: any) => {
     { id: "1", text: "아이디어", x: 400, y: 300, connections: [] }
   ]);
   const [selectedNode, setSelectedNode] = useState<any>(null);
-  const [hoveredNode, setHoveredNode] = useState<any>(null);
+  // 기존 hoveredNode 상태를 toggledNode로 변경
+  const [toggledNode, setToggledNode] = useState<any>(null);
   const [mapTitle, setMapTitle] = useState("새로운 마인드맵");
   const [isPublic, setIsPublic] = useState(false);
   const [publicMaps, setPublicMaps] = useState(mockPublicMaps);
@@ -83,16 +84,27 @@ const MindMapPlatform = (props: any) => {
   const svgRef = useRef(null);
   const [dragState, setDragState] = useState({ isDragging: false, nodeId: null, offset: { x: 0, y: 0 } });
 
-  // 노드 추가
+  // SVG 크기 동적 참조
+  const getSvgSize = () => {
+    const svg = svgRef.current as SVGSVGElement | null;
+    if (!svg) return { width: 600, height: 400 };
+    const rect = svg.getBoundingClientRect();
+    return { width: rect.width, height: rect.height };
+  };
+
+  // 노드 추가 (퍼센트 기반 위치)
   const addNode = useCallback((parentId: any, text: any, x: any, y: any) => {
+    const svgSize = getSvgSize();
+    // x, y가 0~1 사이면 퍼센트로 해석
+    const px = (x > 1 ? x : x * svgSize.width);
+    const py = (y > 1 ? y : y * svgSize.height);
     const newId = Date.now().toString();
-    const newNode = { id: newId, text, x, y, connections: [] };
-    
+    const newNode = { id: newId, text, x: px, y: py, connections: [] };
     setNodes((prev: any) => {
       const updated = [...prev, newNode];
       if (parentId) {
-        return updated.map((node: any) => 
-          node.id === parentId 
+        return updated.map((node: any) =>
+          node.id === parentId
             ? { ...node, connections: [...node.connections, newId] }
             : node
         );
@@ -101,21 +113,22 @@ const MindMapPlatform = (props: any) => {
     });
   }, []);
 
-  // GPT 기반 노드 확장
+  // GPT 기반 노드 확장 (퍼센트 기반, 겹치지 않게 개선)
   const expandNode = useCallback(async (nodeId: any, nodeText: any) => {
+    const svgSize = getSvgSize();
     const suggestions = (mockGPTResponse as any)[nodeText] || ["관련 아이디어 1", "관련 아이디어 2", "관련 아이디어 3"];
     const parentNode = nodes.find((n: any) => n.id === nodeId);
     if (!parentNode) return;
-    
+    const baseAngle = -90;
+    const angleStep = 360 / suggestions.length;
+    const distance = Math.min(svgSize.width, svgSize.height) * 0.22; // 화면 비율에 따라 거리 조정
     suggestions.forEach((suggestion: any, index: any) => {
-      const angle = (index * 60) - 30; // -30, 30, 90도 등으로 분산
-      const distance = 150;
-      const newX = parentNode.x + Math.cos(angle * Math.PI / 180) * distance;
-      const newY = parentNode.y + Math.sin(angle * Math.PI / 180) * distance;
-      
+      const angle = baseAngle + index * angleStep;
+      const rad = angle * Math.PI / 180;
+      const newX = (parentNode.x + Math.cos(rad) * distance) / svgSize.width;
+      const newY = (parentNode.y + Math.sin(rad) * distance) / svgSize.height;
       setTimeout(() => addNode(nodeId, suggestion, newX, newY), index * 200);
     });
-
     setSidebarContent && setSidebarContent({
       type: 'expansion',
       title: `"${nodeText}" 확장 결과`,
@@ -145,8 +158,8 @@ const MindMapPlatform = (props: any) => {
     });
   }, []);
 
-  // 노드 클릭 시 상세 정보
-  const handleNodeClick = useCallback((node) => {
+  // 노드 클릭 시 상세 정보 + 확장/추천 토글
+  const handleNodeClick = useCallback((node: any) => {
     setSelectedNode(node.id);
     setSidebarContent({
       type: 'detail',
@@ -159,7 +172,6 @@ const MindMapPlatform = (props: any) => {
               {node.text}에 대한 핵심 개념과 활용 방안을 정리한 내용입니다.
             </p>
           </div>
-          
           <div className="p-4 bg-green-50 rounded-lg">
             <h4 className="font-semibold text-green-800 mb-2">🔗 연관 키워드</h4>
             <div className="flex flex-wrap gap-2">
@@ -170,7 +182,6 @@ const MindMapPlatform = (props: any) => {
               ))}
             </div>
           </div>
-
           <div className="p-4 bg-orange-50 rounded-lg">
             <h4 className="font-semibold text-orange-800 mb-2">📰 관련 뉴스</h4>
             <p className="text-sm text-gray-600">
@@ -180,6 +191,8 @@ const MindMapPlatform = (props: any) => {
         </div>
       )
     });
+    // 확장/추천 버튼 토글
+    setToggledNode((prev: any) => (prev === node.id ? null : node.id));
   }, []);
 
   // 드래그 기능
@@ -254,7 +267,7 @@ const MindMapPlatform = (props: any) => {
   };
 
   // 노드 편집
-  const startEditNode = (node) => {
+  const startEditNode = (node: any) => {
     setEditingNode({ ...node });
   };
 
@@ -268,7 +281,7 @@ const MindMapPlatform = (props: any) => {
   };
 
   // 노드 삭제
-  const deleteNode = (nodeId) => {
+  const deleteNode = (nodeId: any) => {
     setNodes((prev: any) => {
       const filtered = prev.filter((node: any) => node.id !== nodeId);
       return filtered.map((node: any) => ({
@@ -287,37 +300,93 @@ const MindMapPlatform = (props: any) => {
   );
 
   // 렌더링 함수들
-  const renderNode = (node: any) => (
-    <g key={node.id}>
-      <circle
-        cx={node.x}
-        cy={node.y}
-        r="40"
-        fill={selectedNode === node.id ? "#3B82F6" : "#10B981"}
-        stroke="#fff"
-        strokeWidth="3"
-        style={{ cursor: 'pointer' }}
-        onMouseDown={(e: any) => handleMouseDown(e, node.id)}
-        onMouseEnter={() => setHoveredNode(node.id)}
-        onMouseLeave={() => setHoveredNode(null)}
-        onClick={() => handleNodeClick(node)}
-        className="transition-all duration-200 hover:r-45"
-      />
-      <text
-        x={node.x}
-        y={node.y}
-        textAnchor="middle"
-        dy="0.35em"
-        fill="white"
-        fontSize="12"
-        fontWeight="bold"
-        style={{ pointerEvents: 'none', userSelect: 'none' }}
-      >
-        {node.text.length > 8 ? node.text.substring(0, 8) + '...' : node.text}
-      </text>
-      
-    </g>
-  );
+  const renderNode = (node: any) => {
+    const isDraggingThis = dragState.isDragging && dragState.nodeId === node.id;
+    // 확장/추천 버튼 그룹 위치 계산 함수
+    function getButtonGroupPosition(node: any) {
+      const svgSize = getSvgSize();
+      const groupWidth = 140;
+      const groupHeight = 50;
+      let x = node.x + 50;
+      let y = node.y - 25;
+      // 왼쪽 벽에 가까우면 오른쪽이 아니라 왼쪽에 표시
+      if (x + groupWidth > svgSize.width) x = node.x - groupWidth - 50;
+      if (x < 0) x = 0;
+      // 위쪽 벽에 가까우면 아래로 표시
+      if (y < 0) y = node.y + 45;
+      if (y + groupHeight > svgSize.height) y = svgSize.height - groupHeight;
+      return { x, y };
+    }
+    return (
+      <g key={node.id}>
+        <circle
+          cx={node.x}
+          cy={node.y}
+          r="40"
+          fill={selectedNode === node.id ? "#3B82F6" : "#10B981"}
+          stroke="#fff"
+          strokeWidth="3"
+          style={{ cursor: 'pointer' }}
+          onMouseDown={(e: any) => handleMouseDown(e, node.id)}
+          onClick={() => handleNodeClick(node)}
+          // transition-all, duration-200, hover:r-45 등 transition 관련 클래스 제거
+        />
+        {/* 드래그 중에도 텍스트는 항상 따라오게 렌더링 */}
+        <text
+          x={node.x}
+          y={node.y}
+          textAnchor="middle"
+          dy="0.3ㅎ5em"
+          fill="white"
+          fontSize="12"
+          fontWeight="bold"
+          style={{ pointerEvents: 'none', userSelect: 'none' }}
+        >
+          {node.text.length > 8 ? node.text.substring(0, 8) + '...' : node.text}
+        </text>
+        {/* 드래그 중이 아닐 때만 확장/추천 버튼 렌더링 */}
+        {!isDraggingThis && toggledNode === node.id && (() => {
+          const { x: groupX, y: groupY } = getButtonGroupPosition(node);
+          return (
+            <g>
+              <rect
+                x={groupX}
+                y={groupY}
+                width="90"
+                height="130"
+                rx="20"
+                fill="rgba(0,0,0,0.8)"
+              />
+              {/* 확장 버튼 (윗줄) */}
+              <g
+                style={{ cursor: 'pointer' }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  expandNode(node.id, node.text);
+                }}
+              >
+                <circle cx={groupX + 45} cy={groupY + 36} r="18" fill="#3B82F6" />
+                <text x={groupX + 45} y={groupY + 36} textAnchor="middle" dy="0.35em" fill="white" fontSize="18">+</text>
+                <text x={groupX + 45} y={groupY + 65} textAnchor="middle" fill="white" fontSize="10">확장</text>
+              </g>
+              {/* 추천 버튼 (아랫줄) */}
+              <g
+                style={{ cursor: 'pointer' }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  recommendNode(node.id, node.text);
+                }}
+              >
+                <circle cx={groupX + 45} cy={groupY + 90} r="18" fill="#F59E0B" />
+                <text x={groupX + 45} y={groupY + 90} textAnchor="middle" dy="0.35em" fill="white" fontSize="16">★</text>
+                <text x={groupX + 45} y={groupY + 119} textAnchor="middle" fill="white" fontSize="10">추천</text>
+              </g>
+            </g>
+          );
+        })()}
+      </g>
+    );
+  };
 
   const renderConnections = () => {
     return nodes.flatMap(node =>
@@ -607,18 +676,6 @@ const MindMapPlatform = (props: any) => {
                   <p className="font-medium">{nodes.find((n: any) => n.id === selectedNode)?.text}</p>
                   <p className="mt-1">연결된 노드: {nodes.find((n: any) => n.id === selectedNode)?.connections.length}개</p>
                 </div>
-                      <div className="flex space-x-2 mt-4">
-                        <button
-                          onClick={() => expandNode(selectedNode, nodes.find((n: any) => n.id === selectedNode)?.text)}
-                          className="px-2 py-1 bg-blue-500 text-white rounded">
-                          확장
-                        </button>
-                        <button
-                          onClick={() => recommendNode(selectedNode, nodes.find((n: any) => n.id === selectedNode)?.text)}
-                          className="px-2 py-1 bg-yellow-500 text-white rounded">
-                          추천
-                        </button>
-                      </div>
             </div>
           )}
           {/* 사이드바 컨텐츠 */}
@@ -649,8 +706,9 @@ const MindMapPlatform = (props: any) => {
             <div className="space-y-2">
               <button
                 onClick={() => {
-                  const centerX = 400;
-                  const centerY = 300;
+                  const svgSize = getSvgSize();
+                  const centerX = 0.5;
+                  const centerY = 0.5;
                   addNode(null, "새 아이디어", centerX, centerY);
                 }}
                 className="w-full flex items-center justify-center space-x-2 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition-colors"
@@ -660,9 +718,13 @@ const MindMapPlatform = (props: any) => {
               </button>
               <button
                 onClick={() => {
+                  const svgSize = getSvgSize();
                   const randomKeywords = ['혁신', '기술', '디자인', '사용자경험', '인공지능'];
                   const keyword = randomKeywords[Math.floor(Math.random() * randomKeywords.length)];
-                  addNode(null, keyword, 300 + Math.random() * 200, 200 + Math.random() * 200);
+                  // 랜덤 위치 (퍼센트)
+                  const rx = 0.2 + Math.random() * 0.6;
+                  const ry = 0.2 + Math.random() * 0.6;
+                  addNode(null, keyword, rx, ry);
                 }}
                 className="w-full flex items-center justify-center space-x-2 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors"
               >
@@ -834,7 +896,7 @@ const MindMapPlatform = (props: any) => {
                   </div>
                 </div>
                 <button
-                  onClick={() => navigate('/editor')}
+                  onClick={() => navigate(`/map/${map.id}`)}
                   className="w-full mt-4 bg-indigo-50 text-indigo-600 py-2 rounded-lg hover:bg-indigo-100 transition-colors"
                 >
                   <Eye className="h-4 w-4 inline mr-2" />
