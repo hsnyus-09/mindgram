@@ -316,41 +316,6 @@ const MindMapPlatform = (props: any) => {
         {node.text.length > 8 ? node.text.substring(0, 8) + '...' : node.text}
       </text>
       
-      {hoveredNode === node.id && (
-        <g>
-          <rect
-            x={node.x + 50}
-            y={node.y - 25}
-            width="140"
-            height="50"
-            rx="25"
-            fill="rgba(0,0,0,0.8)"
-          />
-          <g
-            style={{ cursor: 'pointer' }}
-            onClick={(e) => {
-              e.stopPropagation();
-              expandNode(node.id, node.text);
-            }}
-          >
-            <circle cx={node.x + 70} cy={node.y} r="15" fill="#3B82F6" />
-            <text x={node.x + 70} y={node.y} textAnchor="middle" dy="0.35em" fill="white" fontSize="16">+</text>
-          </g>
-          <text x={node.x + 90} y={node.y - 5} fill="white" fontSize="10">확장</text>
-          
-          <g
-            style={{ cursor: 'pointer' }}
-            onClick={(e) => {
-              e.stopPropagation();
-              recommendNode(node.id, node.text);
-            }}
-          >
-            <circle cx={node.x + 120} cy={node.y} r="15" fill="#F59E0B" />
-            <text x={node.x + 120} y={node.y} textAnchor="middle" dy="0.35em" fill="white" fontSize="12">★</text>
-          </g>
-          <text x={node.x + 135} y={node.y - 5} fill="white" fontSize="10">추천</text>
-        </g>
-      )}
     </g>
   );
 
@@ -642,6 +607,18 @@ const MindMapPlatform = (props: any) => {
                   <p className="font-medium">{nodes.find((n: any) => n.id === selectedNode)?.text}</p>
                   <p className="mt-1">연결된 노드: {nodes.find((n: any) => n.id === selectedNode)?.connections.length}개</p>
                 </div>
+                      <div className="flex space-x-2 mt-4">
+                        <button
+                          onClick={() => expandNode(selectedNode, nodes.find((n: any) => n.id === selectedNode)?.text)}
+                          className="px-2 py-1 bg-blue-500 text-white rounded">
+                          확장
+                        </button>
+                        <button
+                          onClick={() => recommendNode(selectedNode, nodes.find((n: any) => n.id === selectedNode)?.text)}
+                          className="px-2 py-1 bg-yellow-500 text-white rounded">
+                          추천
+                        </button>
+                      </div>
             </div>
           )}
           {/* 사이드바 컨텐츠 */}
