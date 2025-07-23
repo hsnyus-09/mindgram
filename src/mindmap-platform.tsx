@@ -84,6 +84,24 @@ const MindMapPlatform = (props: any) => {
 
   const [mapTitle, setMapTitle] = useState("새로운 마인드맵");
 
+const fetchGPTNews = async (topic: string): Promise<string> => {
+  try {
+    const res = await fetch('http://localhost:3001/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: `"${topic}" 관련 최신 기술 동향 또는 뉴스를 한 문단으로 요약해줘. 한국어로`
+      })
+    });
+    const data = await res.json();
+    return data.result.trim();
+  } catch (err) {
+    console.error('AI 뉴스 호출 실패:', err);
+    return `${topic} 관련 뉴스를 불러오는 데 실패했습니다.`;
+  }
+};
+
+
 const fetchGPTIdeas = async (topic: string): Promise<string[]> => {
   try {
     const res = await fetch('http://localhost:3001/api/generate', {
@@ -188,10 +206,34 @@ const fetchGPTIdeas = async (topic: string): Promise<string[]> => {
 
   // 노드 클릭 시 상세 정보 + 확장/추천 토글
   const handleNodeClick = useCallback((node: any) => {
-    setSelectedNode(node.id);
-    setSidebarContent({
-      type: 'detail',
-      title: `"${node.text}" 상세 정보`,
+  setSelectedNode(node.id);
+
+  setSidebarContent({
+    type: 'detail',
+    title: `"${node.text}" 상세 정보`,
+    content: (
+      <div className="space-y-4">
+        <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg">
+          <h4 className="font-semibold text-purple-800 mb-2">💡 아이디어 개요</h4>
+          <p className="text-gray-700">
+            {node.text}에 대한 핵심 개념과 활용 방안을 정리한 내용입니다.
+          </p>
+        </div>
+        <div className="p-4 bg-green-50 rounded-lg">
+          <h4 className="font-semibold text-green-800 mb-2">🔗 연관 키워드</h4>
+          <p className="text-sm text-gray-500">AI로 키워드를 불러오는 중...</p>
+        </div>
+        <div className="p-4 bg-orange-50 rounded-lg">
+          <h4 className="font-semibold text-orange-800 mb-2">📰 관련 뉴스</h4>
+          <p className="text-sm text-gray-500">AI로 뉴스 요약을 불러오는 중...</p>
+        </div>
+      </div>
+    )
+  });
+
+  fetchGPTIdeas(node.text).then((keywords) => {
+    setSidebarContent((prev) => ({
+      ...prev,
       content: (
         <div className="space-y-4">
           <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg">
@@ -203,7 +245,7 @@ const fetchGPTIdeas = async (topic: string): Promise<string[]> => {
           <div className="p-4 bg-green-50 rounded-lg">
             <h4 className="font-semibold text-green-800 mb-2">🔗 연관 키워드</h4>
             <div className="flex flex-wrap gap-2">
-              {['혁신', '기술', '창의성', '문제해결'].map(keyword => (
+              {keywords.map((keyword: string) => (
                 <span key={keyword} className="px-2 py-1 bg-green-200 text-green-800 rounded-full text-sm">
                   {keyword}
                 </span>
@@ -212,16 +254,44 @@ const fetchGPTIdeas = async (topic: string): Promise<string[]> => {
           </div>
           <div className="p-4 bg-orange-50 rounded-lg">
             <h4 className="font-semibold text-orange-800 mb-2">📰 관련 뉴스</h4>
-            <p className="text-sm text-gray-600">
-              최신 업계 동향과 {node.text} 관련 뉴스를 실시간으로 업데이트합니다.
-            </p>
+            <p className="text-sm text-gray-500">AI로 뉴스 요약을 불러오는 중...</p>
           </div>
         </div>
       )
-    });
-    // 확장/추천 버튼 토글
-    setToggledNode((prev: any) => (prev === node.id ? null : node.id));
-  }, []);
+    }));
+  });
+
+  fetchGPTNews(node.text).then((newsSummary) => {
+    setSidebarContent((prev) => ({
+      ...prev,
+      content: (
+        <div className="space-y-4">
+          <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg">
+            <h4 className="font-semibold text-purple-800 mb-2">💡 아이디어 개요</h4>
+            <p className="text-gray-700">
+              {node.text}에 대한 핵심 개념과 활용 방안을 정리한 내용입니다.
+            </p>
+          </div>
+          <div className="p-4 bg-green-50 rounded-lg">
+            <h4 className="font-semibold text-green-800 mb-2">🔗 연관 키워드</h4>
+            <div className="flex flex-wrap gap-2">
+              {Array.isArray(prev.content.props.children[1].props.children[1])
+                ? prev.content.props.children[1].props.children[1]
+                : <p className="text-sm text-gray-500">AI로 키워드를 불러오는 중...</p>}
+            </div>
+          </div>
+          <div className="p-4 bg-orange-50 rounded-lg">
+            <h4 className="font-semibold text-orange-800 mb-2">📰 관련 뉴스</h4>
+            <p className="text-sm text-gray-600">{newsSummary}</p>
+          </div>
+        </div>
+      )
+    }));
+  });
+
+  setToggledNode((prev: any) => (prev === node.id ? null : node.id));
+}, []);
+
 
   // 드래그 기능
   const handleMouseDown = (e: any, nodeId: any) => {
@@ -329,92 +399,94 @@ const fetchGPTIdeas = async (topic: string): Promise<string[]> => {
 
   // 렌더링 함수들
   const renderNode = (node: any) => {
-    const isDraggingThis = dragState.isDragging && dragState.nodeId === node.id;
-    // 확장/추천 버튼 그룹 위치 계산 함수
-    function getButtonGroupPosition(node: any) {
-      const svgSize = getSvgSize();
-      const groupWidth = 140;
-      const groupHeight = 50;
-      let x = node.x + 50;
-      let y = node.y - 25;
-      // 왼쪽 벽에 가까우면 오른쪽이 아니라 왼쪽에 표시
-      if (x + groupWidth > svgSize.width) x = node.x - groupWidth - 50;
-      if (x < 0) x = 0;
-      // 위쪽 벽에 가까우면 아래로 표시
-      if (y < 0) y = node.y + 45;
-      if (y + groupHeight > svgSize.height) y = svgSize.height - groupHeight;
-      return { x, y };
-    }
-    return (
-      <g key={node.id}>
-        <circle
-          cx={node.x}
-          cy={node.y}
-          r="40"
-          fill={selectedNode === node.id ? "#3B82F6" : "#10B981"}
-          stroke="#fff"
-          strokeWidth="3"
-          style={{ cursor: 'pointer' }}
-          onMouseDown={(e: any) => handleMouseDown(e, node.id)}
-          onClick={() => handleNodeClick(node)}
-          // transition-all, duration-200, hover:r-45 등 transition 관련 클래스 제거
-        />
-        {/* 드래그 중에도 텍스트는 항상 따라오게 렌더링 */}
-        <text
-          x={node.x}
-          y={node.y}
-          textAnchor="middle"
-          dy="0.3ㅎ5em"
-          fill="white"
-          fontSize="12"
-          fontWeight="bold"
-          style={{ pointerEvents: 'none', userSelect: 'none' }}
+  const isDraggingThis = dragState.isDragging && dragState.nodeId === node.id;
+
+  function getButtonGroupPosition(node: any) {
+    const svgSize = getSvgSize();
+    const groupWidth = 140;
+    const groupHeight = 50;
+    let x = node.x + 60;
+    let y = node.y - 25;
+    if (x + groupWidth > svgSize.width) x = node.x - groupWidth - 60;
+    if (x < 0) x = 0;
+    if (y < 0) y = node.y + 55;
+    if (y + groupHeight > svgSize.height) y = svgSize.height - groupHeight;
+    return { x, y };
+  }
+
+  return (
+    <g key={node.id}>
+      <circle
+        cx={node.x}
+        cy={node.y}
+        r="60"
+        fill={selectedNode === node.id ? "#3B82F6" : "#10B981"}
+        stroke="#fff"
+        strokeWidth="3"
+        style={{ cursor: 'pointer' }}
+        onMouseDown={(e: any) => handleMouseDown(e, node.id)}
+        onClick={() => handleNodeClick(node)}
+      />
+      <foreignObject
+        x={node.x - 50}
+        y={node.y - 30}
+        width={100}
+        height={60}
+        pointerEvents="none"
+      >
+        <div
+          xmlns="http://www.w3.org/1999/xhtml"
+          style={{
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            textAlign: 'center',
+            wordBreak: 'break-word',
+            whiteSpace: 'normal',
+            fontSize: '12px',
+            fontWeight: 'bold',
+            color: 'white',
+            pointerEvents: 'none',
+            userSelect: 'none',
+            padding: '4px'
+          }}
         >
-          {node.text.length > 8 ? node.text.substring(0, 8) + '...' : node.text}
-        </text>
-        {/* 드래그 중이 아닐 때만 확장/추천 버튼 렌더링 */}
-        {!isDraggingThis && toggledNode === node.id && (() => {
-          const { x: groupX, y: groupY } = getButtonGroupPosition(node);
-          return (
-            <g>
-              <rect
-                x={groupX}
-                y={groupY}
-                width="90"
-                height="130"
-                rx="20"
-                fill="rgba(0,0,0,0.8)"
-              />
-              {/* 확장 버튼 (윗줄) */}
-              <g
-                style={{ cursor: 'pointer' }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  expandNode(node.id, node.text);
-                }}
-              >
-                <circle cx={groupX + 45} cy={groupY + 36} r="18" fill="#3B82F6" />
-                <text x={groupX + 45} y={groupY + 36} textAnchor="middle" dy="0.35em" fill="white" fontSize="18">+</text>
-                <text x={groupX + 45} y={groupY + 65} textAnchor="middle" fill="white" fontSize="10">확장</text>
-              </g>
-              {/* 추천 버튼 (아랫줄) */}
-              <g
-                style={{ cursor: 'pointer' }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  recommendNode(node.id, node.text);
-                }}
-              >
-                <circle cx={groupX + 45} cy={groupY + 90} r="18" fill="#F59E0B" />
-                <text x={groupX + 45} y={groupY + 90} textAnchor="middle" dy="0.35em" fill="white" fontSize="16">★</text>
-                <text x={groupX + 45} y={groupY + 119} textAnchor="middle" fill="white" fontSize="10">추천</text>
-              </g>
+          {node.text}
+        </div>
+      </foreignObject>
+
+      {!isDraggingThis && toggledNode === node.id && (() => {
+        const { x: groupX, y: groupY } = getButtonGroupPosition(node);
+        return (
+          <g>
+            <rect
+              x={groupX}
+              y={groupY}
+              width="90"
+              height="130"
+              rx="20"
+              fill="rgba(0,0,0,0.8)"
+            />
+            <g
+              style={{ cursor: 'pointer' }}
+              onClick={(e) => {
+                e.stopPropagation();
+                expandNode(node.id, node.text);
+              }}
+            >
+              <circle cx={groupX + 45} cy={groupY + 36} r="18" fill="#3B82F6" />
+              <text x={groupX + 45} y={groupY + 36} textAnchor="middle" dy="0.35em" fill="white" fontSize="18">+</text>
+              <text x={groupX + 45} y={groupY + 65} textAnchor="middle" fill="white" fontSize="10">확장</text>
             </g>
-          );
-        })()}
-      </g>
-    );
-  };
+          </g>
+        );
+      })()}
+    </g>
+  );
+};
+
 
   const renderConnections = () => {
     return nodes.flatMap(node =>
@@ -556,7 +628,7 @@ const fetchGPTIdeas = async (topic: string): Promise<string[]> => {
               className="flex items-center space-x-2 text-gray-600 hover:text-indigo-600 transition-colors"
             >
               <Sparkles className="h-6 w-6" />
-              <span className="font-semibold">MindFlow</span>
+              <span className="font-semibold">Mindgram</span>
             </button>
               <button
                 onClick={() => navigate('/community')}
@@ -796,7 +868,7 @@ const fetchGPTIdeas = async (topic: string): Promise<string[]> => {
             <div className="flex items-center space-x-2">
               <button onClick={() => navigate('/')} className="flex items-center space-x-2">
                 <Sparkles className="h-8 w-8 text-indigo-600" />
-                <h1 className="text-2xl font-bold text-gray-900">MindFlow</h1>
+                <h1 className="text-2xl font-bold text-gray-900">Mindgram</h1>
               </button>
             </div>
             <div className="flex items-center space-x-6">

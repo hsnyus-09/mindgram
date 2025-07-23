@@ -20,7 +20,7 @@ export function CommunityPage(props: React.ComponentProps<'div'> & Record<string
             <div className="flex items-center space-x-2">
               <button onClick={() => navigate('/')} className="flex items-center space-x-2">
                 <Sparkles className="h-8 w-8 text-indigo-600" />
-                <h1 className="text-2xl font-bold text-gray-900">MindFlow</h1>
+                <h1 className="text-2xl font-bold text-gray-900">Mindgram</h1>
               </button>
             </div>
             <div className="flex items-center space-x-6">
