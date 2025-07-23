@@ -17,6 +17,8 @@ import {
   Edit,
   Sparkles
 } from 'lucide-react';
+import { CommunityPage } from './CommunityPage';
+import { Link, useNavigate } from 'react-router-dom';
 
 // Mock GPT API 응답 (실제로는 OpenAI API 연동)
 const mockGPTResponse = {
@@ -58,35 +60,38 @@ const mockPublicMaps = [
   }
 ];
 
-const MindMapPlatform = () => {
+const MindMapPlatform = (props: any) => {
+  const navigate = useNavigate();
+  const editorOnly = props.editorOnly;
+  const communityOnly = props.communityOnly;
   const [currentView, setCurrentView] = useState('home');
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<any>(null);
   const [nodes, setNodes] = useState([
     { id: "1", text: "아이디어", x: 400, y: 300, connections: [] }
   ]);
-  const [selectedNode, setSelectedNode] = useState(null);
-  const [hoveredNode, setHoveredNode] = useState(null);
+  const [selectedNode, setSelectedNode] = useState<any>(null);
+  const [hoveredNode, setHoveredNode] = useState<any>(null);
   const [mapTitle, setMapTitle] = useState("새로운 마인드맵");
   const [isPublic, setIsPublic] = useState(false);
   const [publicMaps, setPublicMaps] = useState(mockPublicMaps);
   const [searchQuery, setSearchQuery] = useState("");
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [signupData, setSignupData] = useState({ name: "", email: "", password: "" });
-  const [sidebarContent, setSidebarContent] = useState(null);
-  const [editingNode, setEditingNode] = useState(null);
+  const [sidebarContent, setSidebarContent] = useState<any>(null);
+  const [editingNode, setEditingNode] = useState<any>(null);
   
   const svgRef = useRef(null);
   const [dragState, setDragState] = useState({ isDragging: false, nodeId: null, offset: { x: 0, y: 0 } });
 
   // 노드 추가
-  const addNode = useCallback((parentId, text, x, y) => {
+  const addNode = useCallback((parentId: any, text: any, x: any, y: any) => {
     const newId = Date.now().toString();
     const newNode = { id: newId, text, x, y, connections: [] };
     
-    setNodes(prev => {
+    setNodes((prev: any) => {
       const updated = [...prev, newNode];
       if (parentId) {
-        return updated.map(node => 
+        return updated.map((node: any) => 
           node.id === parentId 
             ? { ...node, connections: [...node.connections, newId] }
             : node
@@ -97,11 +102,12 @@ const MindMapPlatform = () => {
   }, []);
 
   // GPT 기반 노드 확장
-  const expandNode = useCallback(async (nodeId, nodeText) => {
-    const suggestions = mockGPTResponse[nodeText] || ["관련 아이디어 1", "관련 아이디어 2", "관련 아이디어 3"];
-    const parentNode = nodes.find(n => n.id === nodeId);
+  const expandNode = useCallback(async (nodeId: any, nodeText: any) => {
+    const suggestions = (mockGPTResponse as any)[nodeText] || ["관련 아이디어 1", "관련 아이디어 2", "관련 아이디어 3"];
+    const parentNode = nodes.find((n: any) => n.id === nodeId);
+    if (!parentNode) return;
     
-    suggestions.forEach((suggestion, index) => {
+    suggestions.forEach((suggestion: any, index: any) => {
       const angle = (index * 60) - 30; // -30, 30, 90도 등으로 분산
       const distance = 150;
       const newX = parentNode.x + Math.cos(angle * Math.PI / 180) * distance;
@@ -110,15 +116,15 @@ const MindMapPlatform = () => {
       setTimeout(() => addNode(nodeId, suggestion, newX, newY), index * 200);
     });
 
-    setSidebarContent({
+    setSidebarContent && setSidebarContent({
       type: 'expansion',
       title: `"${nodeText}" 확장 결과`,
       content: `AI가 제안한 ${suggestions.length}개의 관련 아이디어가 추가되었습니다.`
-    });
+    } as any);
   }, [nodes, addNode]);
 
   // 노드 추천
-  const recommendNode = useCallback((nodeId, nodeText) => {
+  const recommendNode = useCallback((nodeId: any, nodeText: any) => {
     const recommendations = [
       `${nodeText}의 실제 적용 사례`,
       `${nodeText} 관련 최신 트렌드`,
@@ -177,9 +183,10 @@ const MindMapPlatform = () => {
   }, []);
 
   // 드래그 기능
-  const handleMouseDown = (e, nodeId) => {
-    const rect = svgRef.current.getBoundingClientRect();
-    const node = nodes.find(n => n.id === nodeId);
+  const handleMouseDown = (e: any, nodeId: any) => {
+    const rect = (svgRef.current as any)?.getBoundingClientRect();
+    const node = nodes.find((n: any) => n.id === nodeId);
+    if (!node) return;
     setDragState({
       isDragging: true,
       nodeId,
@@ -190,14 +197,14 @@ const MindMapPlatform = () => {
     });
   };
 
-  const handleMouseMove = (e) => {
+  const handleMouseMove = (e: any) => {
     if (!dragState.isDragging) return;
     
-    const rect = svgRef.current.getBoundingClientRect();
+    const rect = (svgRef.current as any)?.getBoundingClientRect();
     const newX = e.clientX - rect.left - dragState.offset.x;
     const newY = e.clientY - rect.top - dragState.offset.y;
     
-    setNodes(prev => prev.map(node => 
+    setNodes((prev: any) => prev.map((node: any) => 
       node.id === dragState.nodeId 
         ? { ...node, x: newX, y: newY }
         : node
@@ -209,10 +216,10 @@ const MindMapPlatform = () => {
   };
 
   // 로그인
-  const handleLogin = (e) => {
+  const handleLogin = (e: any) => {
     e.preventDefault();
     // 실제로는 서버 API 호출
-    const foundUser = mockUsers.find(u => u.email === loginData.email);
+    const foundUser = mockUsers.find((u: any) => u.email === loginData.email);
     if (foundUser) {
       setUser(foundUser);
       setCurrentView('editor');
@@ -220,10 +227,10 @@ const MindMapPlatform = () => {
   };
 
   // 회원가입
-  const handleSignup = (e) => {
+  const handleSignup = (e: any) => {
     e.preventDefault();
     const newUser = { id: Date.now(), ...signupData };
-    setUser(newUser);
+    setUser(newUser as any);
     setCurrentView('editor');
   };
 
@@ -252,7 +259,7 @@ const MindMapPlatform = () => {
   };
 
   const saveNodeEdit = () => {
-    setNodes(prev => prev.map(node => 
+    setNodes((prev: any) => prev.map((node: any) => 
       node.id === editingNode.id 
         ? { ...node, text: editingNode.text }
         : node
@@ -262,11 +269,11 @@ const MindMapPlatform = () => {
 
   // 노드 삭제
   const deleteNode = (nodeId) => {
-    setNodes(prev => {
-      const filtered = prev.filter(node => node.id !== nodeId);
-      return filtered.map(node => ({
+    setNodes((prev: any) => {
+      const filtered = prev.filter((node: any) => node.id !== nodeId);
+      return filtered.map((node: any) => ({
         ...node,
-        connections: node.connections.filter(id => id !== nodeId)
+        connections: node.connections.filter((id: any) => id !== nodeId)
       }));
     });
     setSelectedNode(null);
@@ -274,13 +281,13 @@ const MindMapPlatform = () => {
   };
 
   // 검색된 공개 맵
-  const filteredPublicMaps = publicMaps.filter(map => 
+  const filteredPublicMaps = publicMaps.filter((map: any) => 
     map.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     map.author.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // 렌더링 함수들
-  const renderNode = (node) => (
+  const renderNode = (node: any) => (
     <g key={node.id}>
       <circle
         cx={node.x}
@@ -290,7 +297,7 @@ const MindMapPlatform = () => {
         stroke="#fff"
         strokeWidth="3"
         style={{ cursor: 'pointer' }}
-        onMouseDown={(e) => handleMouseDown(e, node.id)}
+        onMouseDown={(e: any) => handleMouseDown(e, node.id)}
         onMouseEnter={() => setHoveredNode(node.id)}
         onMouseLeave={() => setHoveredNode(null)}
         onClick={() => handleNodeClick(node)}
@@ -369,288 +376,113 @@ const MindMapPlatform = () => {
     );
   };
 
-  // 메인 렌더링
-  if (currentView === 'home') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-        <nav className="bg-white shadow-sm border-b">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center space-x-2">
-                <Sparkles className="h-8 w-8 text-indigo-600" />
-                <h1 className="text-2xl font-bold text-gray-900">MindFlow</h1>
-              </div>
-              <div className="flex items-center space-x-4">
-                {user ? (
-                  <div className="flex items-center space-x-3">
-                    <span className="text-gray-700">안녕하세요, {user.name}님!</span>
-                    <button
-                      onClick={() => setCurrentView('editor')}
-                      className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
-                    >
-                      마인드맵 만들기
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => setCurrentView('login')}
-                      className="flex items-center space-x-1 text-gray-700 hover:text-indigo-600 transition-colors"
-                    >
-                      <LogIn className="h-4 w-4" />
-                      <span>로그인</span>
-                    </button>
-                    <button
-                      onClick={() => setCurrentView('signup')}
-                      className="flex items-center space-x-1 bg-indigo-600 text-white px-3 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
-                    >
-                      <UserPlus className="h-4 w-4" />
-                      <span>회원가입</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </nav>
+  // 커뮤니티(공개 마인드맵) 페이지 컴포넌트 분리
+  // export function CommunityPage({ user, publicMaps, setNodes, setMapTitle, setCurrentView, searchQuery, setSearchQuery }: any) {
+  //   const filteredPublicMaps = publicMaps.filter((map: any) => 
+  //     map.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //     map.author.toLowerCase().includes(searchQuery.toLowerCase())
+  //   );
+  //   return (
+  //     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+  //       <div className="text-center mb-12">
+  //         <h2 className="text-4xl font-bold text-gray-900 mb-4">
+  //           아이디어를 연결하고 공유하세요
+  //         </h2>
+  //         <p className="text-xl text-gray-600 mb-8">
+  //           AI 기반 마인드맵으로 창의적 사고를 확장하고 다른 사람들과 아이디어를 나누어보세요
+  //         </p>
+  //         {!user && (
+  //           <button
+  //             onClick={() => setCurrentView && setCurrentView('signup')}
+  //             className="bg-indigo-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-indigo-700 transition-colors"
+  //           >
+  //             무료로 시작하기
+  //           </button>
+  //         )}
+  //       </div>
+  //       <div className="mb-8">
+  //         <div className="flex items-center space-x-4 mb-6">
+  //           <h3 className="text-2xl font-bold text-gray-900">공개 마인드맵</h3>
+  //           <div className="flex-1 max-w-md">
+  //             <div className="relative">
+  //               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+  //               <input
+  //                 type="text"
+  //                 placeholder="마인드맵 검색..."
+  //                 value={searchQuery}
+  //                 onChange={(e) => setSearchQuery && setSearchQuery(e.target.value)}
+  //                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+  //               />
+  //             </div>
+  //           </div>
+  //         </div>
+  //         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  //           {filteredPublicMaps.map(map => (
+  //             <div key={map.id} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6">
+  //               <div className="flex items-center justify-between mb-4">
+  //                 <h4 className="text-lg font-semibold text-gray-900">{map.title}</h4>
+  //                 <Globe className="h-5 w-5 text-green-500" />
+  //               </div>
+  //               <div className="mb-4">
+  //                 <svg width="100%" height="120" viewBox="0 0 300 120">
+  //                   {map.nodes.map(node => (
+  //                     <g key={node.id}>
+  //                       <circle
+  //                         cx={node.x * 0.75}
+  //                         cy={node.y * 0.4}
+  //                         r="15"
+  //                         fill="#10B981"
+  //                         stroke="#fff"
+  //                         strokeWidth="2"
+  //                       />
+  //                       <text
+  //                         x={node.x * 0.75}
+  //                         y={node.y * 0.4}
+  //                         textAnchor="middle"
+  //                         dy="0.35em"
+  //                         fill="white"
+  //                         fontSize="8"
+  //                         fontWeight="bold"
+  //                       >
+  //                         {node.text.substring(0, 4)}
+  //                       </text>
+  //                     </g>
+  //                   ))}
+  //                 </svg>
+  //               </div>
+  //               <div className="flex items-center justify-between text-sm text-gray-600">
+  //                 <span>by {map.author}</span>
+  //                 <div className="flex items-center space-x-4">
+  //                   <div className="flex items-center space-x-1">
+  //                     <Heart className="h-4 w-4" />
+  //                     <span>{map.likes}</span>
+  //                   </div>
+  //                   <div className="flex items-center space-x-1">
+  //                     <MessageCircle className="h-4 w-4" />
+  //                     <span>{map.comments}</span>
+  //                   </div>
+  //                 </div>
+  //               </div>
+  //               <button
+  //                 onClick={() => {
+  //                   setNodes && setNodes(map.nodes);
+  //                   setMapTitle && setMapTitle(map.title);
+  //                   setCurrentView && setCurrentView('editor');
+  //                 }}
+  //                 className="w-full mt-4 bg-indigo-50 text-indigo-600 py-2 rounded-lg hover:bg-indigo-100 transition-colors"
+  //               >
+  //                 <Eye className="h-4 w-4 inline mr-2" />
+  //                 자세히 보기
+  //               </button>
+  //             </div>
+  //           ))}
+  //         </div>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              아이디어를 연결하고 공유하세요
-            </h2>
-            <p className="text-xl text-gray-600 mb-8">
-              AI 기반 마인드맵으로 창의적 사고를 확장하고 다른 사람들과 아이디어를 나누어보세요
-            </p>
-            {!user && (
-              <button
-                onClick={() => setCurrentView('signup')}
-                className="bg-indigo-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-indigo-700 transition-colors"
-              >
-                무료로 시작하기
-              </button>
-            )}
-          </div>
-
-          <div className="mb-8">
-            <div className="flex items-center space-x-4 mb-6">
-              <h3 className="text-2xl font-bold text-gray-900">공개 마인드맵</h3>
-              <div className="flex-1 max-w-md">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <input
-                    type="text"
-                    placeholder="마인드맵 검색..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredPublicMaps.map(map => (
-                <div key={map.id} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-lg font-semibold text-gray-900">{map.title}</h4>
-                    <Globe className="h-5 w-5 text-green-500" />
-                  </div>
-                  
-                  <div className="mb-4">
-                    <svg width="100%" height="120" viewBox="0 0 300 120">
-                      {map.nodes.map(node => (
-                        <g key={node.id}>
-                          <circle
-                            cx={node.x * 0.75}
-                            cy={node.y * 0.4}
-                            r="15"
-                            fill="#10B981"
-                            stroke="#fff"
-                            strokeWidth="2"
-                          />
-                          <text
-                            x={node.x * 0.75}
-                            y={node.y * 0.4}
-                            textAnchor="middle"
-                            dy="0.35em"
-                            fill="white"
-                            fontSize="8"
-                            fontWeight="bold"
-                          >
-                            {node.text.substring(0, 4)}
-                          </text>
-                        </g>
-                      ))}
-                    </svg>
-                  </div>
-
-                  <div className="flex items-center justify-between text-sm text-gray-600">
-                    <span>by {map.author}</span>
-                    <div className="flex items-center space-x-4">
-                      <div className="flex items-center space-x-1">
-                        <Heart className="h-4 w-4" />
-                        <span>{map.likes}</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <MessageCircle className="h-4 w-4" />
-                        <span>{map.comments}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      setNodes(map.nodes);
-                      setMapTitle(map.title);
-                      setCurrentView('editor');
-                    }}
-                    className="w-full mt-4 bg-indigo-50 text-indigo-600 py-2 rounded-lg hover:bg-indigo-100 transition-colors"
-                  >
-                    <Eye className="h-4 w-4 inline mr-2" />
-                    자세히 보기
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (currentView === 'login') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
-          <div className="text-center mb-6">
-            <Sparkles className="h-12 w-12 text-indigo-600 mx-auto mb-2" />
-            <h2 className="text-2xl font-bold text-gray-900">로그인</h2>
-          </div>
-          
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">이메일</label>
-              <input
-                type="email"
-                value={loginData.email}
-                onChange={(e) => setLoginData({...loginData, email: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                placeholder="dev@example.com"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">비밀번호</label>
-              <input
-                type="password"
-                value={loginData.password}
-                onChange={(e) => setLoginData({...loginData, password: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                required
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition-colors"
-            >
-              로그인
-            </button>
-          </form>
-          
-          <div className="mt-4 text-center">
-            <button
-              onClick={() => setCurrentView('signup')}
-              className="text-indigo-600 hover:text-indigo-800 text-sm"
-            >
-              계정이 없으신가요? 회원가입
-            </button>
-          </div>
-          
-          <div className="mt-4 text-center">
-            <button
-              onClick={() => setCurrentView('home')}
-              className="text-gray-600 hover:text-gray-800 text-sm"
-            >
-              홈으로 돌아가기
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (currentView === 'signup') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
-          <div className="text-center mb-6">
-            <Sparkles className="h-12 w-12 text-indigo-600 mx-auto mb-2" />
-            <h2 className="text-2xl font-bold text-gray-900">회원가입</h2>
-          </div>
-          
-          <form onSubmit={handleSignup} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">이름</label>
-              <input
-                type="text"
-                value={signupData.name}
-                onChange={(e) => setSignupData({...signupData, name: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">이메일</label>
-              <input
-                type="email"
-                value={signupData.email}
-                onChange={(e) => setSignupData({...signupData, email: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">비밀번호</label>
-              <input
-                type="password"
-                value={signupData.password}
-                onChange={(e) => setSignupData({...signupData, password: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                required
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition-colors"
-            >
-              회원가입
-            </button>
-          </form>
-          
-          <div className="mt-4 text-center">
-            <button
-              onClick={() => setCurrentView('login')}
-              className="text-indigo-600 hover:text-indigo-800 text-sm"
-            >
-              이미 계정이 있으신가요? 로그인
-            </button>
-          </div>
-          
-          <div className="mt-4 text-center">
-            <button
-              onClick={() => setCurrentView('home')}
-              className="text-gray-600 hover:text-gray-800 text-sm"
-            >
-              홈으로 돌아가기
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // 마인드맵 에디터
+  if (editorOnly) {
   return (
     <div className="h-screen bg-gray-50 flex flex-col">
       {/* 헤더 */}
@@ -658,13 +490,24 @@ const MindMapPlatform = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <button
-              onClick={() => setCurrentView('home')}
+                onClick={() => navigate('/')}
               className="flex items-center space-x-2 text-gray-600 hover:text-indigo-600 transition-colors"
             >
               <Sparkles className="h-6 w-6" />
               <span className="font-semibold">MindFlow</span>
             </button>
-            
+              <button
+                onClick={() => navigate('/community')}
+                className="text-gray-700 hover:text-indigo-600 font-medium transition-colors ml-2"
+              >
+                커뮤니티
+              </button>
+              <button
+                onClick={() => navigate('/editor')}
+                className="text-indigo-600 font-bold border-b-2 border-indigo-600"
+              >
+                만들기
+              </button>
             <input
               type="text"
               value={mapTitle}
@@ -673,7 +516,6 @@ const MindMapPlatform = () => {
               placeholder="마인드맵 제목을 입력하세요"
             />
           </div>
-
           <div className="flex items-center space-x-3">
             <div className="flex items-center space-x-2">
               <label className="flex items-center space-x-2 text-sm">
@@ -687,7 +529,6 @@ const MindMapPlatform = () => {
                 <span className="text-gray-700">{isPublic ? '공개' : '비공개'}</span>
               </label>
             </div>
-
             <button
               onClick={saveMap}
               className="flex items-center space-x-1 bg-indigo-600 text-white px-3 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
@@ -695,7 +536,6 @@ const MindMapPlatform = () => {
               <Save className="h-4 w-4" />
               <span>저장</span>
             </button>
-
             {user && (
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <User className="h-4 w-4" />
@@ -705,8 +545,8 @@ const MindMapPlatform = () => {
           </div>
         </div>
       </header>
-
       <div className="flex-1 flex">
+          {/* 마인드맵 캔버스, 사이드바 등 기존 에디터 UI 그대로 */}
         {/* 마인드맵 캔버스 */}
         <div className="flex-1 relative overflow-hidden">
           <svg
@@ -717,7 +557,7 @@ const MindMapPlatform = () => {
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onDoubleClick={(e) => {
-              const rect = svgRef.current.getBoundingClientRect();
+                const rect = (svgRef.current as any)?.getBoundingClientRect();
               const x = e.clientX - rect.left;
               const y = e.clientY - rect.top;
               addNode(null, "새 아이디어", x, y);
@@ -730,14 +570,11 @@ const MindMapPlatform = () => {
               </pattern>
             </defs>
             <rect width="100%" height="100%" fill="url(#grid)" />
-            
             {/* 연결선 */}
             {renderConnections()}
-            
             {/* 노드들 */}
             {nodes.map(renderNode)}
           </svg>
-
           {/* 툴팁 */}
           <div className="absolute bottom-4 left-4 bg-white p-3 rounded-lg shadow-lg border">
             <div className="text-sm text-gray-600 space-y-1">
@@ -747,7 +584,6 @@ const MindMapPlatform = () => {
               <p>• 노드를 클릭하여 상세 정보 확인</p>
             </div>
           </div>
-
           {/* 노드 편집 모달 */}
           {editingNode && (
             <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -778,7 +614,6 @@ const MindMapPlatform = () => {
             </div>
           )}
         </div>
-
         {/* 사이드바 */}
         <div className="w-80 bg-white border-l border-gray-200 flex flex-col">
           {/* 선택된 노드 정보 */}
@@ -788,7 +623,7 @@ const MindMapPlatform = () => {
                 <h3 className="font-semibold text-gray-900">선택된 노드</h3>
                 <div className="flex space-x-1">
                   <button
-                    onClick={() => startEditNode(nodes.find(n => n.id === selectedNode))}
+                      onClick={() => startEditNode(nodes.find((n: any) => n.id === selectedNode))}
                     className="p-1 text-gray-500 hover:text-indigo-600 transition-colors"
                     title="편집"
                   >
@@ -804,12 +639,11 @@ const MindMapPlatform = () => {
                 </div>
               </div>
               <div className="text-sm text-gray-600">
-                <p className="font-medium">{nodes.find(n => n.id === selectedNode)?.text}</p>
-                <p className="mt-1">연결된 노드: {nodes.find(n => n.id === selectedNode)?.connections.length}개</p>
-              </div>
+                  <p className="font-medium">{nodes.find((n: any) => n.id === selectedNode)?.text}</p>
+                  <p className="mt-1">연결된 노드: {nodes.find((n: any) => n.id === selectedNode)?.connections.length}개</p>
+                </div>
             </div>
           )}
-
           {/* 사이드바 컨텐츠 */}
           <div className="flex-1 p-4 overflow-y-auto">
             {sidebarContent ? (
@@ -833,7 +667,6 @@ const MindMapPlatform = () => {
               </div>
             )}
           </div>
-
           {/* 빠른 액션 */}
           <div className="p-4 border-t bg-gray-50">
             <div className="space-y-2">
@@ -848,7 +681,6 @@ const MindMapPlatform = () => {
                 <Plus className="h-4 w-4" />
                 <span>새 노드 추가</span>
               </button>
-              
               <button
                 onClick={() => {
                   const randomKeywords = ['혁신', '기술', '디자인', '사용자경험', '인공지능'];
@@ -861,13 +693,178 @@ const MindMapPlatform = () => {
                 <span>랜덤 아이디어</span>
               </button>
             </div>
-
             <div className="mt-4 pt-4 border-t">
               <div className="text-xs text-gray-500 space-y-1">
                 <p>총 노드: {nodes.length}개</p>
-                <p>연결선: {nodes.reduce((acc, node) => acc + node.connections.length, 0)}개</p>
+                  <p>연결선: {nodes.reduce((acc: any, node: any) => acc + node.connections.length, 0)}개</p>
+                </div>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (communityOnly) {
+    return (
+      <CommunityPage
+        user={user}
+        publicMaps={publicMaps}
+        setNodes={setNodes}
+        setMapTitle={setMapTitle}
+        setCurrentView={setCurrentView}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+      />
+    );
+  }
+
+  // home(메인) 분기: 원래의 메인페이지(히어로, 무료로 시작하기, 공개 마인드맵 등) 복원
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      <nav className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-2">
+              <button onClick={() => navigate('/')} className="flex items-center space-x-2">
+                <Sparkles className="h-8 w-8 text-indigo-600" />
+                <h1 className="text-2xl font-bold text-gray-900">MindFlow</h1>
+              </button>
+            </div>
+            <div className="flex items-center space-x-6">
+              <button
+                onClick={() => navigate('/community')}
+                className="text-gray-700 hover:text-indigo-600 font-medium transition-colors"
+              >
+                커뮤니티
+              </button>
+              <button
+                onClick={() => navigate('/editor')}
+                className="text-gray-700 hover:text-indigo-600 font-medium transition-colors"
+              >
+                만들기
+              </button>
+              {user ? (
+                <div className="flex items-center space-x-3">
+                  <span className="text-gray-700">안녕하세요, {user.name}님!</span>
+                </div>
+              ) : (
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => navigate('/login')}
+                    className="flex items-center space-x-1 text-gray-700 hover:text-indigo-600 transition-colors"
+                  >
+                    <LogIn className="h-4 w-4" />
+                    <span>로그인</span>
+                  </button>
+                  <button
+                    onClick={() => navigate('/signup')}
+                    className="flex items-center space-x-1 bg-indigo-600 text-white px-3 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    <span>회원가입</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </nav>
+      {/* 히어로 섹션 */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="text-center mb-12">
+          <h2 className="text-4xl font-bold text-gray-900 mb-4">
+            아이디어를 연결하고 공유하세요
+          </h2>
+          <p className="text-xl text-gray-600 mb-8">
+            AI 기반 마인드맵으로 창의적 사고를 확장하고 다른 사람들과 아이디어를 나누어보세요
+          </p>
+          {!user && (
+            <button
+              onClick={() => navigate('/signup')}
+              className="bg-indigo-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-indigo-700 transition-colors"
+            >
+              무료로 시작하기
+            </button>
+          )}
+        </div>
+        {/* 공개 마인드맵 섹션 */}
+        <div className="mb-8">
+          <div className="flex items-center space-x-4 mb-6">
+            <h3 className="text-2xl font-bold text-gray-900">공개 마인드맵</h3>
+            <div className="flex-1 max-w-md">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <input
+                  type="text"
+                  placeholder="마인드맵 검색..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {publicMaps.filter((map: any) =>
+              map.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              map.author.toLowerCase().includes(searchQuery.toLowerCase())
+            ).map((map: any) => (
+              <div key={map.id} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-lg font-semibold text-gray-900">{map.title}</h4>
+                  <Globe className="h-5 w-5 text-green-500" />
+                </div>
+                <div className="mb-4">
+                  <svg width="100%" height="120" viewBox="0 0 300 120">
+                    {map.nodes.map((node: any) => (
+                      <g key={node.id}>
+                        <circle
+                          cx={node.x * 0.75}
+                          cy={node.y * 0.4}
+                          r="15"
+                          fill="#10B981"
+                          stroke="#fff"
+                          strokeWidth="2"
+                        />
+                        <text
+                          x={node.x * 0.75}
+                          y={node.y * 0.4}
+                          textAnchor="middle"
+                          dy="0.35em"
+                          fill="white"
+                          fontSize="8"
+                          fontWeight="bold"
+                        >
+                          {node.text.substring(0, 4)}
+                        </text>
+                      </g>
+                    ))}
+                  </svg>
+                </div>
+                <div className="flex items-center justify-between text-sm text-gray-600">
+                  <span>by {map.author}</span>
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-1">
+                      <Heart className="h-4 w-4" />
+                      <span>{map.likes}</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <MessageCircle className="h-4 w-4" />
+                      <span>{map.comments}</span>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => navigate('/editor')}
+                  className="w-full mt-4 bg-indigo-50 text-indigo-600 py-2 rounded-lg hover:bg-indigo-100 transition-colors"
+                >
+                  <Eye className="h-4 w-4 inline mr-2" />
+                  자세히 보기
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       </div>
