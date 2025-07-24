@@ -1,16 +1,23 @@
 import React, { useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from './firebase';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const [loginData, setLoginData] = useState({ email: '', password: '' });
+  const [error, setError] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // 실제 로그인 로직은 생략 (mock)
-    alert('로그인 성공!');
-    navigate('/');
+    try {
+      await signInWithEmailAndPassword(auth, loginData.email, loginData.password);
+      alert('로그인 성공!');
+      navigate('/');
+    } catch (err: any) {
+      setError(err.message);
+    }
   };
 
   return (
@@ -42,6 +49,7 @@ export default function LoginPage() {
               required
             />
           </div>
+          {error && <div className="text-red-500 text-sm">{error}</div>}
           <button
             type="submit"
             className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition-colors"

@@ -1,16 +1,23 @@
 import React, { useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth } from './firebase';
 
 export default function SignupPage() {
   const navigate = useNavigate();
   const [signupData, setSignupData] = useState({ name: '', email: '', password: '' });
+  const [error, setError] = useState('');
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    // 실제 회원가입 로직은 생략 (mock)
-    alert('회원가입 성공!');
-    navigate('/login');
+    try {
+      await createUserWithEmailAndPassword(auth, signupData.email, signupData.password);
+      alert('회원가입 성공! 로그인 해주세요.');
+      navigate('/login');
+    } catch (err: any) {
+      setError(err.message);
+    }
   };
 
   return (
@@ -51,6 +58,7 @@ export default function SignupPage() {
               required
             />
           </div>
+          {error && <div className="text-red-500 text-sm">{error}</div>}
           <button
             type="submit"
             className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition-colors"
